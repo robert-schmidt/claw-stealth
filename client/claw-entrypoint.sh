@@ -15,9 +15,11 @@ else
   echo "[claw] WARN: could not rewrite ${RESOLV} (read-only?) — DNS may use defaults" >&2
 fi
 
-# Friendly notice if the API keys were never filled in.
-if [ -z "${ANTHROPIC_API_KEY:-}" ] && [ -z "${OPENAI_API_KEY:-}" ] && [ -z "${GEMINI_API_KEY:-}" ]; then
-  echo "[claw] note: no ANTHROPIC_API_KEY / OPENAI_API_KEY / GEMINI_API_KEY set in .env" >&2
+# Friendly notice if no AI provider credential was filled in.
+if [ -z "${ANTHROPIC_API_KEY:-}" ] && [ -z "${ANTHROPIC_AUTH_TOKEN:-}" ] \
+   && [ -z "${OPENAI_API_KEY:-}" ] && [ -z "${XAI_API_KEY:-}" ] \
+   && [ -z "${DASHSCOPE_API_KEY:-}" ]; then
+  echo "[claw] note: no AI provider key set in .env (ANTHROPIC_API_KEY etc.) — see README Step 5" >&2
 fi
 
 exec "$@"
