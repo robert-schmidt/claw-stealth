@@ -1,0 +1,30 @@
+# claw-stealth tunnel container.
+#
+# The official sing-box image is distroless-minimal and ships no shell,
+# iptables or cron — all of which the kill switch, auto-reconnect loop and
+# optional time window need. So we copy the pinned sing-box binary onto a
+# small Alpine base (same musl libc the upstream image is built on) and add
+# just those tools.
+ARG SINGBOX_IMAGE=ghcr.io/sagernet/sing-box:v1.13.12
+FROM ${SINGBOX_IMAGE} AS singbox
+
+FROM alpine:3.21
+
+RUN apk add --no-cache \
+      bash \
+      iptables \
+      ip6tables \
+      dcron \
+      jq \
+      bind-tools \
+      tzdata \
+      ca-certificates
+
+# Pinned sing-box binary, byte-identical to the upstream release image.
+COPY --from=singbox /usr/local/bin/sing-box /usr/local/bin/sing-box
+
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh \
+ && sing-box version
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

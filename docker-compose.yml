@@ -1,0 +1,88 @@
+name: claw-stealth
+
+services:
+  # --- tunnel ----------------------------------------------------------------
+  # sing-box client in TUN mode. Creates tun0, routes 0.0.0.0/0 through the
+  # VPS on :443, arms the kill switch, and runs the auto-reconnect supervisor.
+  tunnel:
+    build:
+      context: ./client
+      dockerfile: Dockerfile.tunnel
+      args:
+        SINGBOX_IMAGE: ${SINGBOX_IMAGE:-ghcr.io/sagernet/sing-box:v1.13.12}
+    image: claw-stealth/tunnel
+    container_name: claw-stealth-tunnel
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      TUNNEL_SERVER: ${TUNNEL_SERVER:?Set TUNNEL_SERVER in .env — see .env.example}
+      TUNNEL_PORT: ${TUNNEL_PORT:-443}
+      KILL_SWITCH: ${KILL_SWITCH:-true}
+      AUTO_RECONNECT: ${AUTO_RECONNECT:-true}
+      RECONNECT_MIN_MINUTES: ${RECONNECT_MIN_MINUTES:-45}
+      RECONNECT_MAX_MINUTES: ${RECONNECT_MAX_MINUTES:-90}
+      MUX_ENABLED: ${MUX_ENABLED:-true}
+      TIME_WINDOW_ENABLED: ${TIME_WINDOW_ENABLED:-false}
+      TIME_WINDOW_START: ${TIME_WINDOW_START:-09:00}
+      TIME_WINDOW_END: ${TIME_WINDOW_END:-23:00}
+      TZ: ${TZ:-UTC}
+    volumes:
+      # Rendered client config — create it from setup-server.sh output.
+      - ./client/sing-box.client.json:/etc/sing-box/config.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "test -d /sys/class/net/tun0"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - stealth
+
+  # --- claw ------------------------------------------------------------------
+  # The dev box (Rust/Python/Node/PHP/Composer + claw-code). It has no network
+  # of its own — it lives entirely inside the tunnel's network namespace, so
+  # every byte it sends is tunneled and subject to the kill switch.
+  claw:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        CLAW_BRANCH: ${CLAW_BRANCH:-auto}
+    image: claw-stealth/claw
+    container_name: claw-stealth-claw
+    restart: unless-stopped
+    network_mode: "service:tunnel"
+    depends_on:
+      tunnel:
+        condition: service_healthy
+    cap_drop:
+      - ALL
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      TZ: ${TZ:-UTC}
+    volumes:
+      # Your project codebase. Point WORKSPACE_DIR at it, or work in ./workspace.
+      - ${WORKSPACE_DIR:-./workspace}:/workspace
+      - claw-config:/root/.config
+      - claw-cache:/root/.cache
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
+    # Stay resident; use it with:  docker compose exec -it claw claw
+    command: ["sleep", "infinity"]
+
+networks:
+  stealth:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
+
+volumes:
+  claw-config:
+  claw-cache:

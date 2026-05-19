@@ -1,0 +1,19 @@
+# Secrets and rendered runtime config — never commit these
+.env
+client/sing-box.client.json
+server/sing-box.server.json
+*.key
+*.pem
+reality-keypair.txt
+
+# sing-box / ACME runtime state
+server/data/
+client/data/
+
+# Mounted project code — keep the placeholder, ignore dropped-in projects
+workspace/*
+!workspace/README.md
+
+# Editor / OS noise
+.DS_Store
+*.swp

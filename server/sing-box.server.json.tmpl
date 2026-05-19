@@ -1,0 +1,43 @@
+{
+  "log": {
+    "level": "warn",
+    "timestamp": true
+  },
+  "inbounds": [
+    {
+      "type": "vless",
+      "tag": "vless-in",
+      "listen": "::",
+      "listen_port": __TUNNEL_PORT__,
+      "users": [
+        {
+          "name": "claw-stealth",
+          "uuid": "__UUID__"
+        }
+      ],
+      "tls": {
+        "enabled": true,
+        "server_name": "__REALITY_HANDSHAKE_SERVER__",
+        "reality": {
+          "enabled": true,
+          "handshake": {
+            "server": "__REALITY_HANDSHAKE_SERVER__",
+            "server_port": 443
+          },
+          "private_key": "__REALITY_PRIVATE_KEY__",
+          "short_id": ["__REALITY_SHORT_ID__"]
+        }
+      },
+      "multiplex": {
+        "enabled": true,
+        "padding": true
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "direct",
+      "tag": "direct"
+    }
+  ]
+}

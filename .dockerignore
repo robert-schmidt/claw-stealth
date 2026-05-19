@@ -1,0 +1,9 @@
+.git
+.gitignore
+.env
+*.key
+*.pem
+workspace
+client/sing-box.client.json
+client/data
+server/data

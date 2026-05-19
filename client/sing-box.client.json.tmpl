@@ -1,0 +1,78 @@
+{
+  "log": {
+    "level": "warn",
+    "timestamp": true
+  },
+  "dns": {
+    "servers": [
+      {
+        "type": "https",
+        "tag": "doh-remote",
+        "server": "1.1.1.1",
+        "server_port": 443,
+        "path": "/dns-query",
+        "detour": "vless-out"
+      },
+      {
+        "type": "local",
+        "tag": "dns-local"
+      }
+    ],
+    "final": "doh-remote",
+    "strategy": "prefer_ipv4"
+  },
+  "inbounds": [
+    {
+      "type": "tun",
+      "tag": "tun-in",
+      "interface_name": "tun0",
+      "address": ["172.19.0.1/30"],
+      "mtu": 1500,
+      "auto_route": true,
+      "strict_route": true,
+      "stack": "system"
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "vless",
+      "tag": "vless-out",
+      "server": "__TUNNEL_SERVER__",
+      "server_port": 443,
+      "uuid": "__UUID__",
+      "tls": {
+        "enabled": true,
+        "server_name": "__REALITY_HANDSHAKE_SERVER__",
+        "utls": {
+          "enabled": true,
+          "fingerprint": "chrome"
+        },
+        "reality": {
+          "enabled": true,
+          "public_key": "__REALITY_PUBLIC_KEY__",
+          "short_id": "__REALITY_SHORT_ID__"
+        }
+      },
+      "multiplex": {
+        "enabled": true,
+        "protocol": "h2mux",
+        "max_connections": 4,
+        "min_streams": 4,
+        "padding": true
+      }
+    },
+    {
+      "type": "direct",
+      "tag": "direct"
+    }
+  ],
+  "route": {
+    "auto_detect_interface": true,
+    "default_domain_resolver": "dns-local",
+    "final": "vless-out",
+    "rules": [
+      { "action": "sniff" },
+      { "protocol": "dns", "action": "hijack-dns" }
+    ]
+  }
+}
